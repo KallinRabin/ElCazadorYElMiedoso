@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-comic {
+    font-family: 'Bangers', cursive, sans-serif;
+    letter-spacing: 0.06em;
+  }
+
+  .font-sketch {
+    font-family: 'Permanent Marker', cursive, sans-serif;
+  }
+
+  .font-hand {
+    font-family: 'Patrick Hand', cursive, sans-serif;
+  }
+
+  .comic-border {
+    border: 3px solid #0f172a;
+    box-shadow: 4px 4px 0px #0f172a;
+  }
+
+  .comic-border-amber {
+    border: 3px solid #0f172a;
+    box-shadow: 4px 4px 0px #f59e0b;
+  }
+
+  .comic-btn {
+    border: 3px solid #0f172a;
+    box-shadow: 3px 3px 0px #0f172a;
+    transition: all 0.1s ease-in-out;
+  }
+
+  .comic-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0px #0f172a;
+  }
+
+  .comic-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px #0f172a;
+  }
+}

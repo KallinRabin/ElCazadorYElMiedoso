@@ -1,0 +1,6 @@
+{
+  "name": "Laberinto 3D: Persecución & Roles",
+  "description": "Videojuego 3D de persecución y supervivencia dentro de un laberinto modular con cambio dinámico de roles cada 15 segundos, combate con arco y flechas, trampillas secretas, puertas y stamina.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

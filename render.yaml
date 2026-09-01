@@ -1,0 +1,18 @@
+# Render Blueprint Configuration (render.yaml)
+# Despliegue automático de Laberinto 3D Multijugador en Render.com
+
+services:
+  - type: web
+    name: laberinto-3d-multijugador
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health
+    autoDeploy: true
