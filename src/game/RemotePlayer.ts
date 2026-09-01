@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import { MultiplayerPlayer } from '../types';
+import { MultiplayerPlayer, PlayerRole } from '../types';
 import { buildLocoJovenCharacter } from './CharacterModelBuilder';
 
 export class RemotePlayer {
@@ -82,6 +82,7 @@ export class RemotePlayer {
     this.bowGroup.add(bowString);
 
     char.bowAttachPoint.add(this.bowGroup);
+    this.bowGroup.visible = (data.role === PlayerRole.HUNTER);
 
     // 3. Placa de Nombre y Vida Estilo Cómic
     this.nameplateSprite = this.createNameplateSprite();
@@ -130,6 +131,11 @@ export class RemotePlayer {
     const newSprite = this.createNameplateSprite();
     this.nameplateSprite.material.dispose();
     this.nameplateSprite.material = newSprite.material;
+  }
+
+  public setRole(role: PlayerRole) {
+    this.data.role = role;
+    this.bowGroup.visible = (role === PlayerRole.HUNTER);
   }
 
   public setTransform(

@@ -183,6 +183,11 @@ export type NetworkPacket =
       message: string;
     }
   | {
+      type: 'ROLE_SWITCH';
+      roles: Record<string, PlayerRole>;
+      switchCount: number;
+    }
+  | {
       type: 'GAME_OVER';
       winnerIdOrTeam: string;
       winnerName: string;

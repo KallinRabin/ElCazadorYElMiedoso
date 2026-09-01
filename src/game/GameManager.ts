@@ -81,16 +81,42 @@ export class GameManager {
   }
 
   private setupRoleListeners() {
-    this.roleManager.onRoleSwitch((playerRole, botRole) => {
-      if (this.gameMode === 'SOLO_BOT' || this.gameMode === '1v1') {
+    this.roleManager.onRoleSwitch((playerRole, botRole, switchCount) => {
+      if (this.gameMode === 'SOLO_BOT') {
         this.player.setRole(playerRole);
         this.bot.setRole(botRole);
+
+        // Si le toca ser cazador y tiene menos de 5 flechas, recargar a 5
+        if (playerRole === PlayerRole.HUNTER) {
+          if (this.player.bowSystem.arrowsCount < 5) {
+            this.player.bowSystem.arrowsCount = 5;
+          }
+          this.player.bowSystem.setEquipped(true);
+        } else {
+          this.player.bowSystem.setEquipped(false);
+        }
 
         const msg = playerRole === PlayerRole.HUNTER
           ? '¡AHORA ERES EL CAZADOR! Tienes el arco listo.'
           : '¡AHORA ERES EL CORREDOR! Escóndete y huye.';
 
         this.onRoleAlertCallbacks.forEach(cb => cb(playerRole, msg));
+      } else if (this.gameMode === '1v1' && multiplayerManager.isHost) {
+        // En 1v1, el host sincroniza el intercambio de rol
+        const hostRole = playerRole;
+        const clientRole = playerRole === PlayerRole.HUNTER ? PlayerRole.RUNNER : PlayerRole.HUNTER;
+
+        this.applyRoleChange(hostRole);
+
+        const rolesMap: Record<string, PlayerRole> = {};
+        rolesMap[multiplayerManager.myId] = hostRole;
+
+        this.remotePlayers.forEach((rp, id) => {
+          rp.setRole(clientRole);
+          rolesMap[id] = clientRole;
+        });
+
+        multiplayerManager.sendRoleSwitch(rolesMap, switchCount);
       }
     });
 
@@ -106,7 +132,7 @@ export class GameManager {
       if (this.gameMode === 'SOLO_BOT') {
         this.endGame('BOT', 'El cazador rival te ha eliminado.');
       } else {
-        multiplayerManager.sendGameOver('RIVAL', 'Rival', 'Has sido eliminado en combate.');
+        multiplayerManager.sendGameOver('RIVAL', 'Rival', 'Has sido eliminado por una flecha.');
         this.endGame('RIVAL', 'Has sido eliminado en el laberinto.');
       }
     });
@@ -123,6 +149,25 @@ export class GameManager {
     });
   }
 
+  public applyRoleChange(newRole: PlayerRole) {
+    this.player.setRole(newRole);
+
+    if (newRole === PlayerRole.HUNTER) {
+      if (this.player.bowSystem.arrowsCount < 5) {
+        this.player.bowSystem.arrowsCount = 5;
+      }
+      this.player.bowSystem.setEquipped(true);
+    } else {
+      this.player.bowSystem.setEquipped(false);
+    }
+
+    const msg = newRole === PlayerRole.HUNTER
+      ? '¡AHORA ERES EL CAZADOR! Tienes el arco listo.'
+      : '¡AHORA ERES EL CORREDOR! Escóndete y huye.';
+
+    this.onRoleAlertCallbacks.forEach(cb => cb(newRole, msg));
+  }
+
   private setupNetworkListeners() {
     // Transformación de jugadores remotos
     multiplayerManager.onRemoteTransform = (packet) => {
@@ -136,11 +181,26 @@ export class GameManager {
     multiplayerManager.onRemoteShoot = (packet) => {
       const origin = new THREE.Vector3(packet.origin[0], packet.origin[1], packet.origin[2]);
       const velocity = new THREE.Vector3(packet.velocity[0], packet.velocity[1], packet.velocity[2]);
-      const arrow = new ArrowProjectile(origin, velocity, this.config.arrowDamage, this.config.arrowGravity, false);
+      const arrow = new ArrowProjectile(origin, velocity, 38, this.config.arrowDamage, packet.shooterId);
       arrow.id = packet.id;
       this.scene.add(arrow.mesh);
       this.activeArrows.push(arrow);
       audioManager.playBowRelease();
+    };
+
+    // Cambio de rol remoto sincronizado
+    multiplayerManager.onRemoteRoleSwitch = (packet) => {
+      const myRole = packet.roles[multiplayerManager.myId];
+      if (myRole) {
+        this.applyRoleChange(myRole);
+      }
+
+      this.remotePlayers.forEach((rp, id) => {
+        const theirRole = packet.roles[id];
+        if (theirRole) {
+          rp.setRole(theirRole);
+        }
+      });
     };
 
     // Apertura/cierre de puertas
@@ -297,16 +357,35 @@ export class GameManager {
     });
 
     // 4. Configurar rol y armas según modo
-    if (this.gameMode === 'FFA' || this.gameMode === '2v2') {
-      this.player.setRole(PlayerRole.HUNTER);
-    } else {
-      const myRole = multiplayerManager.myPlayer?.role || PlayerRole.HUNTER;
-      this.player.setRole(myRole);
+    let myInitialRole = PlayerRole.HUNTER;
+    let remoteInitialRole = PlayerRole.RUNNER;
+
+    if (this.gameMode === '1v1') {
+      if (multiplayerManager.isHost) {
+        myInitialRole = PlayerRole.HUNTER;
+        remoteInitialRole = PlayerRole.RUNNER;
+      } else {
+        myInitialRole = PlayerRole.RUNNER;
+        remoteInitialRole = PlayerRole.HUNTER;
+      }
     }
+
+    this.remotePlayers.forEach(rp => {
+      rp.setRole(remoteInitialRole);
+    });
+
+    this.roleManager.reset(myInitialRole);
+    this.applyRoleChange(myInitialRole);
 
     this.player.spawnAt(this.mazeData.playerSpawn);
     this.player.healthSystem.reset();
-    this.player.bowSystem.resetArrows();
+
+    if (myInitialRole === PlayerRole.HUNTER) {
+      this.player.bowSystem.resetArrows(8);
+      this.player.bowSystem.setEquipped(true);
+    } else {
+      this.player.bowSystem.setEquipped(false);
+    }
 
     this.matchTimer = 0;
     this.playerHits = 0;
@@ -403,7 +482,7 @@ export class GameManager {
     }
 
     // 2. Actualizar ciclo de roles en Solo/1v1
-    if (this.gameMode === 'SOLO_BOT' || this.gameMode === '1v1') {
+    if (this.gameMode === 'SOLO_BOT' || (this.gameMode === '1v1' && multiplayerManager.isHost)) {
       this.roleManager.update(delta);
     }
 
@@ -450,6 +529,7 @@ export class GameManager {
     // 7. Actualizar Bot (solo si está activo en Solo)
     if (this.gameMode === 'SOLO_BOT' && this.bot.mesh.visible) {
       this.bot.update(delta, this.player.movementController.position, this.activeCollidersCache, (botArrow) => {
+        botArrow.shooterId = 'BOT';
         this.scene.add(botArrow.mesh);
         this.activeArrows.push(botArrow);
       });
@@ -458,7 +538,7 @@ export class GameManager {
     // 8. Actualizar Flechas y Detección de Impactos
     const hitTargets: Array<{ id: string; box: THREE.Box3; isPlayer: boolean; onHit: (dmg: number) => void }> = [
       {
-        id: 'PLAYER_LOCAL',
+        id: multiplayerManager.myId || 'PLAYER_LOCAL',
         box: this.player.movementController.getPlayerBoundingBox(),
         isPlayer: true,
         onHit: (dmg) => this.player.healthSystem.takeDamage(dmg),
@@ -488,6 +568,10 @@ export class GameManager {
             this.playerHits++;
             this.onHitEffectCallbacks.forEach(cb => cb('hit_target'));
             audioManager.playHurt();
+
+            if (newHp <= 0) {
+              this.endGame('PLAYER', '¡Has eliminado al rival con tu flecha certera!');
+            }
           },
         });
       }
@@ -507,6 +591,7 @@ export class GameManager {
   }
 
   public shootPlayerArrow(arrow: ArrowProjectile) {
+    arrow.shooterId = multiplayerManager.myId || 'PLAYER_LOCAL';
     this.scene.add(arrow.mesh);
     this.activeArrows.push(arrow);
 
@@ -523,6 +608,16 @@ export class GameManager {
 
   private checkWinConditions() {
     if (this.gameState !== GameState.PLAYING) return;
+
+    // Límite de tiempo de 3 minutos (180s)
+    const MATCH_TIME_LIMIT = 180;
+    if (this.matchTimer >= MATCH_TIME_LIMIT) {
+      if (this.player.role === PlayerRole.RUNNER) {
+        this.endGame('PLAYER', '¡VICTORIA DEL CORREDOR! Lograste sobrevivir y esconderte durante los 3 minutos.');
+      } else {
+        this.endGame('RIVAL', '¡TIEMPO AGOTADO! El corredor eludió tus flechas y sobrevivió.');
+      }
+    }
 
     if (this.gameMode === 'SOLO_BOT') {
       if (this.config.matchTimeLimit > 0 && this.matchTimer >= this.config.matchTimeLimit) {

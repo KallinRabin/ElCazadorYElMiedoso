@@ -163,7 +163,7 @@ export class BotController {
               const spawnPos = this.position.clone().add(new THREE.Vector3(0, 1.4, 0)).add(dirToPlayer.clone().multiplyScalar(0.7));
               const shootVel = dirToPlayer.clone().multiplyScalar(32);
               shootVel.y += 1.2;
-              const arrow = new ArrowProjectile(spawnPos, shootVel.normalize(), 34, 40, false);
+              const arrow = new ArrowProjectile(spawnPos, shootVel.normalize(), 34, 40, 'BOT');
               onShootArrow(arrow);
             }
           }

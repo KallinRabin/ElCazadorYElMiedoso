@@ -34,6 +34,12 @@ export const HUD: React.FC<HUDProps> = ({
   const staminaPercent = Math.max(0, Math.min(100, (playerStats.stamina / playerStats.maxStamina) * 100));
   const healthPercent = Math.max(0, Math.min(100, (playerStats.health / playerStats.maxHealth) * 100));
 
+  // Temporizador general de partida (3:00 min)
+  const matchRemaining = Math.max(0, 180 - matchStats.elapsedTime);
+  const matchMin = Math.floor(matchRemaining / 60);
+  const matchSec = matchRemaining % 60;
+  const matchTimeFormatted = `${matchMin}:${matchSec < 10 ? '0' : ''}${matchSec}`;
+
   return (
     <div id="game-hud" className="absolute inset-0 pointer-events-none select-none flex flex-col justify-between p-6 z-20">
       {/* 1. EFECTOS DE PANTALLA (Daño y Hit Marker) */}
@@ -41,26 +47,39 @@ export const HUD: React.FC<HUDProps> = ({
         <div className="absolute inset-0 bg-red-600/35 animate-pulse pointer-events-none transition-opacity duration-150" />
       )}
 
-      {/* 2. PARTE SUPERIOR: TEMPORIZADOR DE CAMBIO DE ROL ESTILO CÓMIC */}
+      {/* 2. PARTE SUPERIOR: TEMPORIZADORES ESTILO CÓMIC */}
       <div className="w-full flex flex-col items-center justify-start gap-2">
-        <div
-          className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl border-2 transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.85)] backdrop-blur-md ${
-            isTimerCritical
-              ? 'bg-rose-950 border-rose-500 text-rose-100 scale-105 animate-bounce'
-              : 'bg-slate-900/95 border-amber-400/80 text-slate-100'
-          }`}
-        >
-          <div className={`w-3.5 h-3.5 rounded-full border-2 border-black ${isTimerCritical ? 'bg-rose-500 animate-ping' : 'bg-amber-400'}`} />
-          <span className="text-xs md:text-sm font-black tracking-wider uppercase text-slate-200">
-            Cambio de Rol:
-          </span>
-          <span
-            className={`font-mono text-xl md:text-2xl font-black px-2.5 py-0.5 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.8)] ${
-              isTimerCritical ? 'text-white bg-rose-600' : 'text-slate-950 bg-amber-400'
+        <div className="flex items-center gap-4">
+          {/* Temporizador General de Partida (3:00) */}
+          <div className="flex items-center gap-2.5 px-5 py-2 rounded-2xl border-2 border-slate-700 bg-slate-900/95 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.85)] backdrop-blur-md">
+            <span className="text-xs font-black tracking-wider uppercase text-slate-300">
+              Partida:
+            </span>
+            <span className="font-mono text-xl font-black text-amber-300 bg-slate-950 px-2.5 py-0.5 rounded-lg border border-slate-800">
+              {matchTimeFormatted}
+            </span>
+          </div>
+
+          {/* Temporizador de Cambio de Rol */}
+          <div
+            className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl border-2 transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.85)] backdrop-blur-md ${
+              isTimerCritical
+                ? 'bg-rose-950 border-rose-500 text-rose-100 scale-105 animate-bounce'
+                : 'bg-slate-900/95 border-amber-400/80 text-slate-100'
             }`}
           >
-            {timer < 10 ? `0${timer}` : timer}s
-          </span>
+            <div className={`w-3.5 h-3.5 rounded-full border-2 border-black ${isTimerCritical ? 'bg-rose-500 animate-ping' : 'bg-amber-400'}`} />
+            <span className="text-xs md:text-sm font-black tracking-wider uppercase text-slate-200">
+              Cambio de Rol:
+            </span>
+            <span
+              className={`font-mono text-xl md:text-2xl font-black px-2.5 py-0.5 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.8)] ${
+                isTimerCritical ? 'text-white bg-rose-600' : 'text-slate-950 bg-amber-400'
+              }`}
+            >
+              {timer < 10 ? `0${timer}` : timer}s
+            </span>
+          </div>
         </div>
 
         {/* Notificación cinemática de cambio de rol */}

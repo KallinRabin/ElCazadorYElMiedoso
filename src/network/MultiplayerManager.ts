@@ -26,6 +26,7 @@ export class MultiplayerManager {
   public onRemoteDoor: ((doorId: string, isOpen: boolean) => void) | null = null;
   public onRemoteHit: ((targetId: string, shooterId: string, damage: number, newHealth: number) => void) | null = null;
   public onRemoteMapShift: ((newSeed: number, message: string) => void) | null = null;
+  public onRemoteRoleSwitch: ((packet: Extract<NetworkPacket, { type: 'ROLE_SWITCH' }>) => void) | null = null;
   public onRemoteGameOver: ((winnerIdOrTeam: string, winnerName: string, reason: string) => void) | null = null;
 
   // Generador de ID de sala amigable
@@ -191,6 +192,10 @@ export class MultiplayerManager {
               state: this.currentLobby,
             });
             this.onLobbyUpdate?.(this.currentLobby);
+
+            if (this.currentLobby.isGameStarted && this.currentLobby.players.length <= 1) {
+              this.onRemoteGameOver?.(this.myId, this.myPlayer?.name || 'Anfitrión', '¡Victoria por abandono! Tu rival se ha desconectado de la partida.');
+            }
           }
         });
       });
@@ -227,8 +232,16 @@ export class MultiplayerManager {
         this.onRemoteHit?.(packet.targetId, packet.shooterId, packet.damage, packet.newHealth);
       } else if (packet.type === 'MAP_SHIFT') {
         this.onRemoteMapShift?.(packet.newSeed, packet.message);
+      } else if (packet.type === 'ROLE_SWITCH') {
+        this.onRemoteRoleSwitch?.(packet);
       } else if (packet.type === 'GAME_OVER') {
         this.onRemoteGameOver?.(packet.winnerIdOrTeam, packet.winnerName, packet.reason);
+      }
+    });
+
+    conn.on('close', () => {
+      if (this.currentLobby?.isGameStarted) {
+        this.onRemoteGameOver?.(this.myId, this.myPlayer?.name || 'Jugador', '¡Victoria por abandono! El anfitrión se ha desconectado de la sala.');
       }
     });
 
@@ -360,6 +373,14 @@ export class MultiplayerManager {
       type: 'MAP_SHIFT',
       newSeed,
       message,
+    });
+  }
+
+  public sendRoleSwitch(roles: Record<string, PlayerRole>, switchCount: number) {
+    this.broadcast({
+      type: 'ROLE_SWITCH',
+      roles,
+      switchCount,
     });
   }
 

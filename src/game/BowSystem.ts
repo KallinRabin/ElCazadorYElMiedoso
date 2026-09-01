@@ -302,7 +302,7 @@ export class BowSystem {
       direction,
       effectiveSpeed,
       effectiveDamage,
-      ownerIsPlayer,
+      'PLAYER_LOCAL',
       this.arrowGravity
     );
   }

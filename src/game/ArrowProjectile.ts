@@ -14,7 +14,7 @@ export class ArrowProjectile {
   public isStuck: boolean = false;
   public isExpired: boolean = false;
   public lifetime: number = 15; // Segundos antes de desaparecer si queda clavada
-  public ownerIsPlayer: boolean;
+  public shooterId: string = 'PLAYER_LOCAL';
   public damage: number = 50;
 
   private gravity: number = 9.8;
@@ -26,14 +26,14 @@ export class ArrowProjectile {
     direction: THREE.Vector3,
     speed: number = 36,
     damage: number = 50,
-    ownerIsPlayer: boolean = true,
+    shooterId: string = 'PLAYER_LOCAL',
     gravity: number = 9.8
   ) {
     this.position = startPos.clone();
     this.previousPosition = startPos.clone();
     this.velocity = direction.clone().normalize().multiplyScalar(speed);
     this.damage = damage;
-    this.ownerIsPlayer = ownerIsPlayer;
+    this.shooterId = shooterId;
     this.gravity = gravity;
 
     this.mesh = new THREE.Group();
@@ -134,10 +134,10 @@ export class ArrowProjectile {
     if (moveDist > 0.0001) {
       const ray = new THREE.Ray(this.previousPosition, moveDir.clone().normalize());
 
-      // 1. Chequeo contra objetivos (Jugador / Bot)
+      // 1. Chequeo contra objetivos (Jugador local, Bot o Jugadores remotos)
       for (const target of targets) {
-        // No auto-dañarse
-        if (target.isPlayer === this.ownerIsPlayer) continue;
+        // No auto-dañarse: descartar solo al propio tirador
+        if (target.id === this.shooterId) continue;
 
         const intersect = ray.intersectBox(target.box, new THREE.Vector3());
         if (intersect && intersect.distanceTo(this.previousPosition) <= moveDist) {
