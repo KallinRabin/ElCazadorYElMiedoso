@@ -51,6 +51,13 @@ export class MultiplayerManager {
       try {
         this.peer = new Peer(peerId, {
           debug: 0,
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun2.l.google.com:19302' },
+            ],
+          },
         });
 
         this.peer.on('open', (id) => {
@@ -108,6 +115,13 @@ export class MultiplayerManager {
       try {
         this.peer = new Peer({
           debug: 0,
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun2.l.google.com:19302' },
+            ],
+          },
         });
 
         this.peer.on('open', (myPeerId) => {
